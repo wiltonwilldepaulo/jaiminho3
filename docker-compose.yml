@@ -1,369 +1,101 @@
-name: erp-fanorte
-
-# Anchors YAML — DRY para configurações repetidas
-x-logging: &default-logging
-  driver: json-file
-  options:
-    max-size: "10m"
-    max-file: "5"
-    compress: "true"
-
-x-restart-policy: &default-restart
-  restart: unless-stopped
-
-networks:
-  edge:
-    name: erp_edge
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-erp-edge
-  app:
-    name: erp_app
-    driver: bridge
-    internal: false # PgBouncer/Redis precisam de DNS interno do Docker
-    driver_opts:
-      com.docker.network.bridge.name: br-erp-app
-  data:
-    name: erp_data
-    driver: bridge
-    internal: true # rede 100% isolada — Postgres sem rota ao mundo externo
-    driver_opts:
-      com.docker.network.bridge.name: br-erp-data
-
-# Volumes nomeados — gerenciados pelo Docker (performance e isolamento)
-volumes:
-  postgres_data:
-    name: erp_postgres_data
-  redis_data:
-    name: erp_redis_data
-  traefik_logs:
-    name: erp_traefik_logs
-  nginx_logs:
-    name: erp_nginx_logs
-  app_logs:
-    name: erp_app_logs
-
-# SERVIÇOS
 services:
-  # Traefik — proxy reverso, terminação TLS, ACME (Let's Encrypt)
-  # Único serviço que expõe portas ao host (80, 443)
-  traefik:
-    image: traefik:v3.6.14
-    container_name: erp_traefik
-    <<: *default-restart
-    logging: *default-logging
-    networks:
-      - edge
+  # Serviço do Nginx, responsável por receber as requisições HTTP
+  nginx:
+    # Imagem oficial do Nginx, baseada em Alpine Linux
+    image: nginx:1.30-alpine3.23
+
+    # Nome fixo do container para facilitar identificação e debug
+    container_name: app_nginx
+
+    # Mapeia a porta 8080 do host para a porta 80 do container
+    # Permite acessar a aplicação via http://localhost:8080
     ports:
       - "80:80"
-      - "443:443"
-      - "443:443/udp" # HTTP/3 (QUIC)
-    volumes:
-      # Socket Docker em read-only — Traefik só precisa LER eventos de container
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Configs estáticas e dinâmicas em read-only
-      - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-      # acme.json em read-write (Traefik precisa escrever certs renovados)
-      # ATENÇÃO: arquivo deve existir com permissão 600 antes do up
-      - ./docker/traefik/acme.json:/letsencrypt/acme.json
-      - traefik_logs:/var/log/traefik
-    environment:
-      # Credenciais do provider DNS para challenge DNS-01 (wildcards)
-      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?CF_DNS_API_TOKEN }
-      TZ: ${TZ:-America/Porto_Velho}
-    healthcheck:
-      test: [ "CMD", "traefik", "healthcheck", "--ping" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
-    labels:
-      # Dashboard do Traefik — restrito por basic auth + IP allowlist
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${APP_DOMAIN}`)"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@file,security-headers@file"
 
-  # Nginx — servir estáticos do Vite, buffering para FrankenPHP
-  # Não executa PHP. Não termina TLS (Traefik faz isso).
-  nginx:
-    image: nginx:1.30-alpine3.23
-    container_name: erp_nginx
-    <<: *default-restart
-    logging: *default-logging
-    networks:
-      - edge
-      - app
+    # Volume que monta o arquivo de configuração do Nginx no container
+    # O sufixo :ro indica que o arquivo será somente leitura
     volumes:
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./public:/var/www/public:ro
-      - nginx_logs:/var/log/nginx
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./:/var/www/
+
+    # Define que o container PHP deve ser iniciado antes do Nginx
     depends_on:
-      app:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-    # Tmpfs para diretórios temporários — performance + segurança
-    tmpfs:
-      - /var/cache/nginx:size=64M
-      - /tmp:size=32M
-    # Read-only root filesystem — container não pode modificar próprios binários
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=erp_edge"
-      # Router principal HTTPS
-      - "traefik.http.routers.app.rule=Host(`${APP_DOMAIN}`) || Host(`www.${APP_DOMAIN}`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls=true"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.app.tls.domains[0].main=${APP_DOMAIN}"
-      - "traefik.http.routers.app.tls.domains[0].sans=*.${APP_DOMAIN}"
-      - "traefik.http.routers.app.middlewares=security-headers@file,rate-limit@file"
-      - "traefik.http.services.app.loadbalancer.server.port=80"
-  # App — FrankenPHP (PHP 8.5.4) em worker mode, executando Slim
-  # Build local via Dockerfile multi-stage
-  app:
+      - php
+
+    # Conecta o container à rede interna do projeto
+    networks:
+      - app_network
+
+  # Serviço do PHP, responsável por executar a aplicação
+  php:
+    #Define esse mesmo diretório como o ponto de execução padrão dentro do container, garantindo
+    #que comandos como o Composer sejam executados no contexto correto do projeto, onde estão
+    working_dir: /var/www
+    # Define que a imagem será construída a partir de um Dockerfile
     build:
+      # Contexto de build, normalmente a raiz do projeto
       context: .
+      # Caminho do Dockerfile responsável por montar o ambiente PHP
       dockerfile: docker/php/Dockerfile
-      target: runtime
-      args:
-        PHP_VERSION: 8.5.4
-    image: erp-fanorte/app:${APP_VERSION:-latest}
-    container_name: erp_app
-    <<: *default-restart
-    logging: *default-logging
-    networks:
-      - app
-      - data # acessa PgBouncer (que está em 'data')
+
+    # Nome fixo do container PHP
+    container_name: app_php
+
+    # Permite que o container acesse o VSCode no host para debug via Xdebug
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    #Permitindo que qualquer alteração feita no código no VS Code seja imediatamente refletida no ambiente Docker
     volumes:
-      # Código da aplicação — em produção, removido (código vai na imagem)
-      # Em dev, montado via docker-compose.override.yml
-      - app_logs:/var/www/var/log
+      - ./:/var/www/
+
+    command: >+
+      sh -c "composer install --no-interaction &&
+             composer dump-autoload -o &&
+             php-fpm"
+
+    # Variáveis de ambiente do container
     environment:
-      # Application
-      APP_ENV: ${APP_ENV:?APP_ENV }
-      APP_DEBUG: ${APP_DEBUG:-false}
-      APP_SECRET: ${APP_SECRET:?APP_SECRET }
-      APP_URL: https://${APP_DOMAIN}
-      TZ: ${TZ:-America/Porto_Velho}
+      # Define o fuso horário do container
+      TZ: ${TZ}
+      # Se APP_DEBUG tem valor no .env → XDEBUG_MODE=debug (ativo); se vazio → usa "off" do php.ini
+      XDEBUG_MODE: ${APP_DEBUG:+debug}
 
-      # Database (via PgBouncer, NÃO direto no Postgres)
-      DB_HOST: pgbouncer
-      DB_PORT: 6432
-      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB }
-      DB_USER: ${POSTGRES_USER:?POSTGRES_USER }
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
+    # Conecta o container à rede interna do projeto
+    networks:
+      - app_network
 
-      # Redis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD }
-      REDIS_DB: 0
-
-      # FrankenPHP worker mode
-      FRANKENPHP_NUM_THREADS: ${FRANKENPHP_NUM_THREADS:-8}
-      FRANKENPHP_CONFIG: |
-        worker {
-          file /var/www/public/index.php
-          num ${FRANKENPHP_NUM_THREADS:-8}
-        }
-    depends_on:
-      pgbouncer:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s # bootstrap do worker leva mais tempo
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 256M
-    security_opt:
-      - no-new-privileges:true
-
-  # PostgreSQL 18.3 — banco transacional
-  # Acessível APENAS pela rede 'data' (rede internal: true)
+  # Serviço do banco de dados PostgreSQL
   postgres:
+    # Imagem oficial do PostgreSQL baseada em Alpine Linux
     image: postgres:18.3-alpine3.23
-    container_name: erp_postgres
-    <<: *default-restart
-    logging: *default-logging
-    networks:
-      - data
+    # Nome fixo do container do banco
+    container_name: app_postgres
+    restart: unless-stopped
+    # Variáveis de ambiente usadas pelo PostgreSQL na inicialização
+    environment:
+      # Nome do banco de dados, vindo do arquivo .env
+      POSTGRES_DB: ${DB_NAME}
+      # Usuário do banco, vindo do arquivo .env
+      POSTGRES_USER: ${DB_USER}
+      # Senha do banco, vindo do arquivo .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Define o fuso horário do container
+      TZ: ${TZ}
+    # Volumes persistentes e scripts de inicialização
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # init.sql executa apenas na primeira inicialização do volume
-      - ./docker/postgres/volumes/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB }
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER }
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8 --data-checksums"
-      PGDATA: /var/lib/postgresql/data/pgdata
-      TZ: ${TZ:-America/Porto_Velho}
-    # Tuning para PG18 — valores devem ser revisados conforme RAM real
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=200"
-      - "-c"
-      - "shared_buffers=256MB"
-      - "-c"
-      - "effective_cache_size=768MB"
-      - "-c"
-      - "work_mem=4MB"
-      - "-c"
-      - "maintenance_work_mem=64MB"
-      - "-c"
-      - "wal_level=replica"
-      - "-c"
-      - "max_wal_size=2GB"
-      - "-c"
-      - "checkpoint_completion_target=0.9"
-      - "-c"
-      - "random_page_cost=1.1" # SSD/NVMe
-      - "-c"
-      - "log_min_duration_statement=500" # log queries lentas (>500ms)
-      - "-c"
-      - "log_checkpoints=on"
-      - "-c"
-      - "log_connections=on"
-      - "-c"
-      - "log_disconnections=on"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 2G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
-    security_opt:
-      - no-new-privileges:true
-    shm_size: 256mb # Postgres usa shared memory para parallel workers
-
-  # PgBouncer — pooler de conexões em modo 'transaction'
-  # Sidecar do Postgres: app conecta no PgBouncer, PgBouncer conecta no Postgres
-  # Ponte entre as redes 'app' e 'data'
-  pgbouncer:
-    image: edoburu/pgbouncer:1.24.1
-    container_name: erp_pgbouncer
-    <<: *default-restart
-    logging: *default-logging
+      # Volume nomeado para persistir os dados do banco
+      - ./docker/postgres/storage:/var/lib/postgresql/18/docker
+      # Script SQL executado automaticamente na primeira inicialização
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    # Conecta o container à rede interna do projeto
     networks:
-      - app
-      - data
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:?POSTGRES_USER }
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
-      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB }
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 1000
-      DEFAULT_POOL_SIZE: 25
-      RESERVE_POOL_SIZE: 5
-      RESERVE_POOL_TIMEOUT: 3
-      SERVER_RESET_QUERY: DISCARD ALL
-      AUTH_TYPE: scram-sha-256
-      ADMIN_USERS: ${POSTGRES_USER}
-      TZ: ${TZ:-America/Porto_Velho}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-    security_opt:
-      - no-new-privileges:true
+      - app_network
 
-  # Redis 8.6.2 — cache puro (sem persistence em produção)
-  # Para sessão/filas, criar serviço SEPARADO 'redis-queue' com AOF habilitado
-  redis:
-    image: redis:8.6.2-alpine3.23
-    container_name: erp_redis
-    <<: *default-restart
-    logging: *default-logging
-    networks:
-      - app
-    volumes:
-      - redis_data:/data
-      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-    command:
-      - "redis-server"
-      - "/usr/local/etc/redis/redis.conf"
-      - "--requirepass"
-      - "${REDIS_PASSWORD:?REDIS_PASSWORD }"
-    environment:
-      TZ: ${TZ:-America/Porto_Velho}
-    healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "--no-auth-warning", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-    security_opt:
-      - no-new-privileges:true
-    sysctls:
-      net.core.somaxconn: 1024
+# Definição das redes do projeto
+networks:
+  # Rede bridge interna para comunicação entre os containers
+  app_network:
+    driver: bridge
