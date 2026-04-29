@@ -70,7 +70,7 @@ services:
       - traefik_logs:/var/log/traefik
     environment:
       # Credenciais do provider DNS para challenge DNS-01 (wildcards)
-      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?CF_DNS_API_TOKEN obrigatório}
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?CF_DNS_API_TOKEN }
       TZ: ${TZ:-America/Porto_Velho}
     healthcheck:
       test: [ "CMD", "traefik", "healthcheck", "--ping" ]
@@ -169,23 +169,23 @@ services:
       - app_logs:/var/www/var/log
     environment:
       # Application
-      APP_ENV: ${APP_ENV:?APP_ENV obrigatório}
+      APP_ENV: ${APP_ENV:?APP_ENV }
       APP_DEBUG: ${APP_DEBUG:-false}
-      APP_SECRET: ${APP_SECRET:?APP_SECRET obrigatório}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET }
       APP_URL: https://${APP_DOMAIN}
       TZ: ${TZ:-America/Porto_Velho}
 
       # Database (via PgBouncer, NÃO direto no Postgres)
       DB_HOST: pgbouncer
       DB_PORT: 6432
-      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB obrigatório}
-      DB_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatório}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatório}
+      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB }
+      DB_USER: ${POSTGRES_USER:?POSTGRES_USER }
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
 
       # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD obrigatório}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD }
       REDIS_DB: 0
 
       # FrankenPHP worker mode
@@ -231,9 +231,9 @@ services:
       # init.sql executa apenas na primeira inicialização do volume
       - ./docker/postgres/volumes/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB obrigatório}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatório}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatório}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB }
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER }
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8 --data-checksums"
       PGDATA: /var/lib/postgresql/data/pgdata
       TZ: ${TZ:-America/Porto_Velho}
@@ -298,9 +298,9 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:?POSTGRES_USER obrigatório}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatório}
-      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB obrigatório}
+      DB_USER: ${POSTGRES_USER:?POSTGRES_USER }
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD }
+      DB_NAME: ${POSTGRES_DB:?POSTGRES_DB }
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 1000
       DEFAULT_POOL_SIZE: 25
@@ -346,7 +346,7 @@ services:
       - "redis-server"
       - "/usr/local/etc/redis/redis.conf"
       - "--requirepass"
-      - "${REDIS_PASSWORD:?REDIS_PASSWORD obrigatório}"
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD }"
     environment:
       TZ: ${TZ:-America/Porto_Velho}
     healthcheck:

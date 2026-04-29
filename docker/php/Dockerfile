@@ -201,38 +201,26 @@ RUN mkdir -p \
     /var/www/public \
     && chown -R app:app /var/www
 
-# -----------------------------------------------------------------------------
-# Copiar artefatos do builder
-# Apenas o que é necessário em produção — vendor + código + public
-# -----------------------------------------------------------------------------
+# Copiar artefatos do builder Apenas o que é necessário em produção — vendor + código + public
 COPY --from=builder --chown=app:app /var/www/vendor   /var/www/vendor
 COPY --from=builder --chown=app:app /var/www/public   /var/www/public
 COPY --from=builder --chown=app:app /var/www/app      /var/www/app
 COPY --from=builder --chown=app:app /var/www/composer.json /var/www/composer.json
 
-# Copiar php.ini de produção (criado em etapa posterior)
-# Falha graciosa: se o arquivo não existir ainda, copia o default da imagem
-COPY --chown=root:root /docker/php/php.ini /usr/local/etc/php/php.ini
+# Copiar php.ini de produção se o arquivo não existir ainda, copia o default da imagem
+#COPY --chown=root:root /docker/php/php.ini /usr/local/etc/php/php.ini
 
-# -----------------------------------------------------------------------------
-# Mudança para usuário não-root
-# A partir daqui, nada roda como root
-# -----------------------------------------------------------------------------
+# Mudança para usuário não-root A partir daqui, nada roda como root
 USER app:app
 
 WORKDIR /var/www
 
-# -----------------------------------------------------------------------------
-# Healthcheck — endpoint /health deve responder 200 em <5s
-# Define o contrato: app DEVE expor /health verificando banco + redis
-# -----------------------------------------------------------------------------
+# Healthcheck — endpoint /health deve responder 200 em <5s efine o contrato: app DEVE expor /health verificando banco + redis
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl --fail --silent --show-error http://localhost/health || exit 1
 
-# -----------------------------------------------------------------------------
 # Portas expostas (documentação — Compose ignora EXPOSE, mas é boa prática)
 # 80 → HTTP interno (Nginx/Traefik termina TLS na frente)
-# -----------------------------------------------------------------------------
 EXPOSE 80
 
 # -----------------------------------------------------------------------------
