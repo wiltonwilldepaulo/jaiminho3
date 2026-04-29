@@ -3,4 +3,5 @@
 /tmp
 /logs
 /docker/postgres/storage
+/docker/redis/storage
 .env
