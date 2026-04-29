@@ -1,0 +1,80 @@
+# =============================================================================
+# .dockerignore — ERP Fanorte
+# Reduz build context, evita copiar arquivos desnecessários para o builder
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Editores e IDEs
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Dependências (instaladas dentro do container)
+vendor
+node_modules
+
+# Build output (gerado dentro do container)
+public/assets
+.vite
+dist
+
+# Ambiente local
+.env
+.env.local
+.env.*.local
+
+# Testes e CI
+tests
+phpunit.xml*
+.phpunit.cache
+.pest
+coverage*
+junit.xml
+
+# Análise estática
+.phpstan
+.rector
+.php-cs-fixer.cache
+.php_cs.cache
+phpstan.neon
+phpstan.neon.dist
+rector.php
+.php-cs-fixer.php
+
+# Docker (não copia configs Docker para dentro do container)
+docker
+docker-compose*.yml
+.dockerignore
+Dockerfile*
+
+# Documentação
+docs
+*.md
+LICENSE
+
+# Logs e cache
+logs
+*.log
+storage/cache
+storage/logs
+var/cache
+var/log
+tmp
+
+# Certificados
+certs
+*.pem
+*.key
+*.crt
+
+# Postgres/Redis volumes (se algum dev errado tiver criado)
+docker/postgres/volumes
+docker/redis/volumes

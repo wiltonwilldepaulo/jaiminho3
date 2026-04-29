@@ -1,2 +1,213 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# =============================================================================
+# .gitattributes — ERP Fanorte
+# Stack: PHP 8.5.4 · Slim · Twig · Vite · PostgreSQL 18 · Redis 8 · Traefik v3
+# Dev: Windows 11 | Runtime: Alpine Linux (containers Docker)
+# =============================================================================
+# Regra global: Git normaliza automaticamente line endings ao commitar.
+# Checkout respeita o eol definido por padrão de arquivo abaixo.
+# =============================================================================
+
+* text=auto eol=lf
+
+
+# =============================================================================
+# PHP — forçar LF em todos os ambientes
+# CRLF em PHP não quebra o interpretador, mas gera diffs sujos e
+# inconsistência entre dev (Windows) e runtime (Alpine Linux).
+# =============================================================================
+*.php        text eol=lf
+*.phtml      text eol=lf
+*.phpt       text eol=lf
+
+
+# =============================================================================
+# Templates Twig — forçar LF
+# =============================================================================
+*.twig       text eol=lf
+*.html       text eol=lf
+*.htm        text eol=lf
+
+
+# =============================================================================
+# Frontend — JavaScript, CSS, Vite
+# CRÍTICO: vite.config.js com CRLF pode causar comportamento inesperado
+# em scripts npm run dentro do WSL2 ou ao ser lido pelo Node no container.
+# =============================================================================
+*.js         text eol=lf
+*.mjs        text eol=lf
+*.cjs        text eol=lf
+*.ts         text eol=lf
+*.tsx        text eol=lf
+*.jsx        text eol=lf
+*.css        text eol=lf
+*.scss       text eol=lf
+*.sass       text eol=lf
+*.less       text eol=lf
+
+
+# =============================================================================
+# Docker — CRÍTICO: CRLF em Dockerfile e shell scripts quebra Alpine Linux
+# O Alpine usa /bin/sh (ash) via musl — o \r é interpretado como parte
+# do comando e gera erros como "bad interpreter" ou falha silenciosa.
+# =============================================================================
+Dockerfile        text eol=lf
+Dockerfile.*      text eol=lf
+*.dockerfile      text eol=lf
+docker-compose.yml          text eol=lf
+docker-compose.*.yml        text eol=lf
+.dockerignore     text eol=lf
+
+
+# =============================================================================
+# Shell scripts — CRÍTICO: mesmo motivo do Docker acima
+# Um script .sh com CRLF falha com: /bin/sh^M: bad interpreter
+# =============================================================================
+*.sh         text eol=lf
+*.bash       text eol=lf
+*.zsh        text eol=lf
+
+
+# =============================================================================
+# Nginx — forçar LF
+# nginx.conf com CRLF pode causar erros de parsing no nginx:1.30-alpine3.23
+# =============================================================================
+*.conf       text eol=lf
+*.nginx      text eol=lf
+nginx.conf   text eol=lf
+
+
+# =============================================================================
+# Configuração e dados estruturados — forçar LF
+# =============================================================================
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.json       text eol=lf
+*.toml       text eol=lf
+*.ini        text eol=lf
+*.env        text eol=lf
+*.env.*      text eol=lf
+.env.example text eol=lf
+
+
+# =============================================================================
+# SQL — forçar LF
+# Migrations e seeds executados dentro dos containers Alpine
+# =============================================================================
+*.sql        text eol=lf
+*.pgsql      text eol=lf
+
+
+# =============================================================================
+# Documentação e texto — forçar LF
+# =============================================================================
+*.md         text eol=lf
+*.txt        text eol=lf
+*.rst        text eol=lf
+*.xml        text eol=lf
+*.svg        text eol=lf
+LICENSE      text eol=lf
+CHANGELOG    text eol=lf
+README       text eol=lf
+
+
+# =============================================================================
+# Arquivos de lock — texto, mas diff desativado
+# composer.lock e package-lock.json são gigantes e seus diffs são ilegíveis.
+# Git ainda faz merge (importante para detectar conflitos reais),
+# mas `git diff` não exibe o conteúdo completo por padrão.
+# =============================================================================
+composer.lock     text eol=lf diff=json
+package-lock.json text eol=lf diff=json
+
+
+# =============================================================================
+# [BINÁRIOS] — sem normalização de line ending, sem diff de texto
+# Git não tenta interpretar esses arquivos como texto.
+# Previne corrupção silenciosa e diffs inúteis.
+# =============================================================================
+
+# Imagens
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.ico        binary
+*.webp       binary
+*.avif       binary
+*.tiff       binary
+*.bmp        binary
+
+# Fontes web
+*.woff       binary
+*.woff2      binary
+*.ttf        binary
+*.otf        binary
+*.eot        binary
+
+# Arquivos comprimidos
+*.zip        binary
+*.tar        binary
+*.gz         binary
+*.tgz        binary
+*.bz2        binary
+*.7z         binary
+*.rar        binary
+
+# Documentos
+*.pdf        binary
+*.doc        binary
+*.docx       binary
+*.xls        binary
+*.xlsx       binary
+
+# Certificados e chaves (binários que podem ter qualquer encoding)
+*.pem        binary
+*.der        binary
+*.p12        binary
+*.pfx        binary
+
+
+# =============================================================================
+# GitHub Linguist — estatísticas de linguagem do repositório
+# Evita que vendor/, node_modules/ e arquivos gerados distorçam
+# a porcentagem de PHP/JS/CSS exibida no GitHub.
+# =============================================================================
+
+# Dependências — não contam nas estatísticas de linguagem
+vendor/           linguist-vendored=true
+node_modules/     linguist-vendored=true
+
+# Assets gerados pelo Vite — não contam (são gerados, não escritos à mão)
+public/assets/    linguist-generated=true
+
+# Locks — gerados automaticamente, não contam
+composer.lock     linguist-generated=true
+package-lock.json linguist-generated=true
+
+# Twig — forçar detecção (GitHub às vezes classifica como HTML puro)
+*.twig            linguist-language=HTML+Django
+
+
+# =============================================================================
+# Export-ignore — excluídos de `git archive` (pacote de distribuição)
+# Útil para gerar um pacote limpo de produção sem configs de dev,
+# testes, CI e documentação de desenvolvimento.
+# =============================================================================
+.gitattributes    export-ignore
+.gitignore        export-ignore
+.github/          export-ignore
+.vscode/          export-ignore
+.idea/            export-ignore
+docker/           export-ignore
+docker-compose.override.yml  export-ignore
+tests/            export-ignore
+docs/             export-ignore
+vite.config.js    export-ignore
+package.json      export-ignore
+package-lock.json export-ignore
+*.md              export-ignore
+phpstan.neon      export-ignore
+phpstan.neon.dist export-ignore
+rector.php        export-ignore
+.php-cs-fixer.php export-ignore
+pest.config.php   export-ignore

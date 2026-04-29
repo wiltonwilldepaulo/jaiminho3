@@ -1,0 +1,106 @@
+# =============================================================================
+# .gitignore — ERP Fanorte
+# Stack: PHP 8.5.4 · Slim · Twig · Vite · PostgreSQL 18 · Redis 8 · Traefik v3
+# =============================================================================
+
+
+# [CRÍTICO] Segredos e credenciais — NUNCA versionar
+.env
+.env.local
+.env.*.local
+
+# Traefik — acme.json contém chaves privadas TLS dos certificados Let's Encrypt
+# Permissão deve ser 600 no host — vazar esse arquivo expõe todos os certs
+**/acme.json
+letsencrypt/
+
+# PHP — Dependências
+vendor/
+
+# Cache do Composer (gerado localmente, não pertence ao repo)
+.composer-cache/
+
+# Cache do PHPStan / Rector / outras ferramentas de análise estática
+.phpstan/
+.rector/
+.php-cs-fixer.cache
+.php_cs.cache
+
+
+# Testes — Artefatos gerados pelo Pest / PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+.pest/
+coverage/
+coverage-html/
+coverage-xml/
+coverage.xml
+junit.xml
+
+# node_modules: maior diretório do universo, nunca versionar
+node_modules/
+
+# Build do Vite — gerado em tempo de deploy via `npm run build`
+# O manifest.json é gerado junto; o CI/CD deve rodar o build antes do deploy
+public/assets/
+
+# Cache interno do Vite
+.vite/
+dist/
+
+# Dados persistentes do PostgreSQL — nunca versionar dados de banco
+docker/postgres/volumes/
+
+# Dados persistentes do Redis (RDB + AOF)
+docker/redis/volumes/
+
+
+# Logs dos containers
+docker/volumes/logs/
+docker/logs/
+
+# Certificados gerados localmente (mkcert para dev)
+docker/certs/
+certs/
+*.pem
+*.key
+*.crt
+# exceto arquivos de exemplo explicitamente nomeados
+!example.crt
+!example.key
+
+
+# Twig — Cache de templates compilados
+var/cache/
+var/log/
+storage/cache/
+storage/logs/
+cache/twig/
+tmp/
+
+# Logs da aplicação
+logs/
+*.log
+log/
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# Arquivos temporários e de sistema
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+.cache/
