@@ -92,5 +92,5 @@
 
 {% block script %}
 {% include 'partial/script.html' %}
-<script defer type="module" src="/assets/js/pages/customer.js"></script>
+{{ vite('resources/js/pages/customer.js') }}
 {% endblock %}

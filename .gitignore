@@ -6,3 +6,9 @@
 /docker/postgres/storage
 /docker/redis/storage
 .env
+# Node.js / Vite
+/node_modules
+# Arquivo sentinela do dev server (nunca versionar)
+/public/hot
+# Build output do Vite — gerado pelo CI/CD a partir de resources/
+/public/assets

@@ -1,6 +1,7 @@
 import FindCompany from "../components/find-company.js";
 import Requests from "../components/requests.js";
 import Validate from "../components/validate.js";
+
 const Action = document.getElementById('action');
 const Id = document.getElementById('id');
 const Cnpj = document.getElementById('numeroDocumento');
@@ -83,7 +84,6 @@ Cnpj.addEventListener('blur', async () => {
     if (Cnpj.value.trim() === '' || Cnpj.value.replace(/\D/g, '').length < 14) {
         return;
     }
-    // Verifica se o CNPJ está preenchido
     const findCompany = new FindCompany({ cnpjField: 'numeroDocumento', cnaeValue: 'cnae', cnaeSearch: 'codigoAtividadeEconomica' })
     await findCompany.FindCompanyData();
 });
