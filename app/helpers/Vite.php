@@ -61,11 +61,11 @@ final class Vite
     # Coleta recursivamente CSS, script/preload e imports do manifest
     private static function collect(array $m, string $key, array &$css, array &$pre, array &$js, array &$sc, array &$sp, bool $isEntry = true): void
     {
-        # Guard: aborta silenciosamente se o chunk não existir — manifest pode ter referências opcionais
+        # Guard aborta silenciosamente se o chunk não existir — manifest pode ter referências opcionais
         if (!$chunk = ($m[$key] ?? null)) return;
-        # Registra o CSS direto do chunk; $sc (seen CSS) previne <link> duplicados entre chunks
+        # Registra o CSS direto do chunk $sc (seen CSS) previne <link> duplicados entre chunks
         foreach ($chunk['css'] ?? [] as $c) $sc[$c] ??= ($css[] = sprintf('<link rel="stylesheet" href="%s%s">', self::BASE, $c));
-        # Arquivo principal: CSS → <link>, entry JS → <script>, import JS → <modulepreload>
+        # Arquivo principal: CSS <link>, entry JS <script>, import JS <modulepreload>
         if ($f = $chunk['file'] ?? '') {
             if (str_ends_with($f, '.css')) {
                 $sc[$f] ??= ($css[] = sprintf('<link rel="stylesheet" href="%s%s">', self::BASE, $f));
@@ -81,7 +81,7 @@ final class Vite
             if ($sp[$ik] ?? false) continue;
             # Marca como visitado antes da recursão para garantir passagem única
             $sp[$ik] = true;
-            # Recursão com $isEntry = false: dependências viram modulepreload, não <script>
+            # Recursão com $isEntry = false dependências viram modulepreload, não <script>
             self::collect($m, $ik, $css, $pre, $js, $sc, $sp, false);
         }
     }
