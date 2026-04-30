@@ -6,6 +6,7 @@ namespace app\helpers;
 
 final class Vite
 {
+
     # Arquivo criado pelo 'vite dev' — presença indica servidor de desenvolvimento ativo
     private const HOT  = __DIR__ . '/../../public/hot';
     # Manifest gerado pelo 'npm run build' — mapeia entrypoints para arquivos com hash
@@ -28,13 +29,11 @@ final class Vite
         # Detecta o ambiente pelo arquivo 'hot' e despacha para o renderizador correto
         return self::isHot() ? self::renderHot($entries) : self::renderBuild($entries);
     }
-
     # Retorna true quando o arquivo 'hot' existe no disco — dev server do Vite ativo
     public static function isHot(): bool
     {
         return file_exists(self::HOT);
     }
-
     # Modo dev: injeta o cliente HMR uma vez e aponta cada entrypoint para o dev server
     private static function renderHot(array $entries): string
     {
@@ -45,7 +44,6 @@ final class Vite
         # Acrescenta uma tag <script type="module"> por entrypoint apontando para o dev server
         return $out . implode("\n    ", array_map(fn($e) => "<script type=\"module\" src=\"{$url}/{$e}\"></script>", $entries));
     }
-
     # Modo build: resolve arquivos com hash via manifest e gera CSS → modulepreload → JS
     private static function renderBuild(array $entries): string
     {
@@ -60,8 +58,7 @@ final class Vite
         # CSS antes evita FOUC; modulepreload antes de JS permite carregamento paralelo
         return implode("\n    ", array_merge($css, $pre, $js));
     }
-
-    # Coleta recursivamente CSS, script/preload e imports de um chunk do manifest
+    # Coleta recursivamente CSS, script/preload e imports do manifest
     private static function collect(array $m, string $key, array &$css, array &$pre, array &$js, array &$sc, array &$sp, bool $isEntry = true): void
     {
         # Guard: aborta silenciosamente se o chunk não existir — manifest pode ter referências opcionais
