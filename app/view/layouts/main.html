@@ -5,8 +5,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="{{icon}}" sizes="any">
-    {% include 'partial/css.html' %}
     <title>{{titulo}}</title>
+    {{ vite('resources/css/app.css') }}
+    {% block css %}{% endblock %}
 </head>
 
 <body>
@@ -27,9 +28,8 @@
             {% endblock %}
         </div>
     </main>
-    {% block script %}
-    {% include 'partial/script.html' %}
-    {% endblock %}
+    {{ vite('resources/js/app.js') }}
+    {% block script %}{% endblock %}
 </body>
 
 </html>

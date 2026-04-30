@@ -6,246 +6,86 @@ namespace app\helpers;
 
 final class Vite
 {
-    private const PUBLIC_DIR    = __DIR__ . '/../../public';
-    private const HOT_FILE      = self::PUBLIC_DIR . '/hot';
-    private const MANIFEST_FILE = self::PUBLIC_DIR . '/assets/manifest.json';
-    private const BUILD_BASE    = '/assets/';
+    # Arquivo criado pelo 'vite dev' — presença indica servidor de desenvolvimento ativo
+    private const HOT  = __DIR__ . '/../../public/hot';
+    # Manifest gerado pelo 'npm run build' — mapeia entrypoints para arquivos com hash
+    private const MAN  = __DIR__ . '/../../public/assets/manifest.json';
+    # Prefixo das URLs públicas dos assets servidos pelo Nginx em produção
+    private const BASE = '/assets/';
 
+    # Cache estático do manifest — leitura de disco ocorre apenas uma vez por processo
     private static ?array $manifest = null;
+    # Garante que o cliente HMR do Vite seja injetado somente uma vez por requisição
+    private static bool $injected = false;
 
-    private static ?string $hotUrl = null;
-    private static bool   $clientInjected = false;
-
+    # Ponto de entrada público — valida entrypoints e delega para o modo correto
     public static function tag(string ...$entries): string
     {
-        # Guard Clause — pré-condição explícita
-        if (count($entries) === 0) {
-            throw new \InvalidArgumentException(
-                'Vite::tag() exige ao menos um entrypoint.'
-            );
-        }
-
-        foreach ($entries as $entry) {
-            if (trim($entry) === '') {
-                throw new \InvalidArgumentException(
-                    'Entrypoint vazio passado para Vite::tag().'
-                );
-            }
-        }
-
-        return self::isHot()
-            ? self::renderHot($entries)
-            : self::renderBuild($entries);
+        # Fail Fast: recusa lista vazia antes de qualquer processamento
+        if (!$entries) throw new \InvalidArgumentException('Vite::tag() exige ao menos um entrypoint.');
+        # Fail Fast: recusa entrypoints em branco individualmente
+        foreach ($entries as $e) if (trim($e) === '') throw new \InvalidArgumentException('Entrypoint vazio passado para Vite::tag().');
+        # Detecta o ambiente pelo arquivo 'hot' e despacha para o renderizador correto
+        return self::isHot() ? self::renderHot($entries) : self::renderBuild($entries);
     }
 
-    # Indica se o dev server do Vite está rodando agora.
+    # Retorna true quando o arquivo 'hot' existe no disco — dev server do Vite ativo
     public static function isHot(): bool
     {
-        return file_exists(self::HOT_FILE);
+        return file_exists(self::HOT);
     }
 
-    # Modo desenvolvimento: aponta tudo para o dev server.
+    # Modo dev: injeta o cliente HMR uma vez e aponta cada entrypoint para o dev server
     private static function renderHot(array $entries): string
     {
-        $hotUrl = self::getHotUrl();
-        $tags   = [];
-
-        if (!self::$clientInjected) {
-            $tags[] = sprintf(
-                '<script type="module" src="%s/@vite/client"></script>',
-                $hotUrl
-            );
-            self::$clientInjected = true;
-        }
-
-        foreach ($entries as $entry) {
-            $tags[] = sprintf(
-                '<script type="module" src="%s/%s"></script>',
-                $hotUrl,
-                ltrim($entry, '/')
-            );
-        }
-
-        return implode("\n    ", $tags);
+        # Lê a URL base do arquivo 'hot'; usa localhost:5173 como fallback seguro
+        $url = trim((string) @file_get_contents(self::HOT)) ?: 'http://localhost:5173';
+        # Injeta @vite/client (necessário para HMR) apenas na primeira chamada do processo
+        $out = !self::$injected && (self::$injected = true) ? "<script type=\"module\" src=\"{$url}/@vite/client\"></script>\n    " : '';
+        # Acrescenta uma tag <script type="module"> por entrypoint apontando para o dev server
+        return $out . implode("\n    ", array_map(fn($e) => "<script type=\"module\" src=\"{$url}/{$e}\"></script>", $entries));
     }
 
+    # Modo build: resolve arquivos com hash via manifest e gera CSS → modulepreload → JS
     private static function renderBuild(array $entries): string
     {
-        $manifest = self::getManifest();
-        $cssTags  = [];
-        $jsTags   = [];
-        $preloadTags = [];
-        $seenCss     = [];
-        $seenPreload = [];
+        # Decodifica o manifest uma única vez e armazena em cache estático
+        $m = self::$manifest ??= json_decode((string) file_get_contents(self::MAN), true, 512, JSON_THROW_ON_ERROR);
+        # Acumuladores separados: $css, $pre e $js garantem a ordem correta na saída HTML
+        [$css, $pre, $js, $sc, $sp] = [[], [], [], [], []];
+        # Valida cada entrypoint no manifest e coleta suas tags e dependências
+        foreach ($entries as $e) isset($m[$e])
+            ? self::collect($m, $e, $css, $pre, $js, $sc, $sp)
+            : throw new \RuntimeException("Entrypoint '{$e}' não encontrado em manifest.json. Execute 'npm run build'.");
+        # CSS antes evita FOUC; modulepreload antes de JS permite carregamento paralelo
+        return implode("\n    ", array_merge($css, $pre, $js));
+    }
 
-        foreach ($entries as $entry) {
-            # Guard Clause — entry precisa existir no manifest
-            if (!isset($manifest[$entry])) {
-                throw new \RuntimeException(
-                    "Entrypoint '{$entry}' não encontrado em manifest.json. "
-                        . "Execute 'npm run build'."
-                );
-            }
-
-            $chunk = $manifest[$entry];
-            $file  = $chunk['file'] ?? null;
-
-            if (!is_string($file) || $file === '') {
-                throw new \RuntimeException(
-                    "Manifest inválido: entry '{$entry}' não possui campo 'file' válido."
-                );
-            }
-
-            # 1. CSS associado diretamente ao chunk (Vite resolve via @import)
-            foreach (($chunk['css'] ?? []) as $css) {
-                if (!isset($seenCss[$css])) {
-                    $cssTags[] = sprintf(
-                        '<link rel="stylesheet" href="%s%s">',
-                        self::BUILD_BASE,
-                        $css
-                    );
-                    $seenCss[$css] = true;
-                }
-            }
-
-            # 2. Chunks compartilhados (jQuery, Bootstrap etc.) — modulepreload
-            #    melhora performance: navegador busca em paralelo antes de precisar
-            self::collectImportedChunks($manifest, $entry, $preloadTags, $seenPreload, $seenCss, $cssTags);
-
-            # 3. Tag principal (script ou link, dependendo da extensão)
-            if (str_ends_with($file, '.css')) {
-                if (!isset($seenCss[$file])) {
-                    $cssTags[] = sprintf(
-                        '<link rel="stylesheet" href="%s%s">',
-                        self::BUILD_BASE,
-                        $file
-                    );
-                    $seenCss[$file] = true;
-                }
+    # Coleta recursivamente CSS, script/preload e imports de um chunk do manifest
+    private static function collect(array $m, string $key, array &$css, array &$pre, array &$js, array &$sc, array &$sp, bool $isEntry = true): void
+    {
+        # Guard: aborta silenciosamente se o chunk não existir — manifest pode ter referências opcionais
+        if (!$chunk = ($m[$key] ?? null)) return;
+        # Registra o CSS direto do chunk; $sc (seen CSS) previne <link> duplicados entre chunks
+        foreach ($chunk['css'] ?? [] as $c) $sc[$c] ??= ($css[] = sprintf('<link rel="stylesheet" href="%s%s">', self::BASE, $c));
+        # Arquivo principal: CSS → <link>, entry JS → <script>, import JS → <modulepreload>
+        if ($f = $chunk['file'] ?? '') {
+            if (str_ends_with($f, '.css')) {
+                $sc[$f] ??= ($css[] = sprintf('<link rel="stylesheet" href="%s%s">', self::BASE, $f));
+            } elseif ($isEntry) {
+                $js[] = sprintf('<script type="module" src="%s%s"></script>', self::BASE, $f);
             } else {
-                $jsTags[] = sprintf(
-                    '<script type="module" src="%s%s"></script>',
-                    self::BUILD_BASE,
-                    $file
-                );
+                $pre[] = sprintf('<link rel="modulepreload" href="%s%s">', self::BASE, $f);
             }
         }
-
-        # Ordem: CSS → modulepreload → JS (evita FOUC e maximiza paralelismo)
-        return implode("\n    ", array_merge($cssTags, $preloadTags, $jsTags));
-    }
-
-    private static function collectImportedChunks(
-        array $manifest,
-        string $entryKey,
-        array &$preloadTags,
-        array &$seenPreload,
-        array &$seenCss,
-        array &$cssTags,
-    ): void {
-        $chunk = $manifest[$entryKey] ?? null;
-        if ($chunk === null) {
-            return;
+        # Itera os imports estáticos do chunk para adicionar modulepreload das dependências
+        foreach ($chunk['imports'] ?? [] as $ik) {
+            # Pula chunk já visitado — previne loops infinitos em imports circulares
+            if ($sp[$ik] ?? false) continue;
+            # Marca como visitado antes da recursão para garantir passagem única
+            $sp[$ik] = true;
+            # Recursão com $isEntry = false: dependências viram modulepreload, não <script>
+            self::collect($m, $ik, $css, $pre, $js, $sc, $sp, false);
         }
-
-        foreach (($chunk['imports'] ?? []) as $importedKey) {
-            if (isset($seenPreload[$importedKey])) {
-                continue;
-            }
-            $seenPreload[$importedKey] = true;
-
-            $imported = $manifest[$importedKey] ?? null;
-            if ($imported === null) {
-                continue;
-            }
-
-            $importedFile = $imported['file'] ?? null;
-            if (is_string($importedFile) && $importedFile !== '') {
-                $preloadTags[] = sprintf(
-                    '<link rel="modulepreload" href="%s%s">',
-                    self::BUILD_BASE,
-                    $importedFile
-                );
-            }
-
-            # CSS de chunks compartilhados também precisa entrar
-            foreach (($imported['css'] ?? []) as $css) {
-                if (!isset($seenCss[$css])) {
-                    $cssTags[] = sprintf(
-                        '<link rel="stylesheet" href="%s%s">',
-                        self::BUILD_BASE,
-                        $css
-                    );
-                    $seenCss[$css] = true;
-                }
-            }
-
-            # Recursão controlada — segue cadeia de imports estáticos
-            self::collectImportedChunks(
-                $manifest,
-                $importedKey,
-                $preloadTags,
-                $seenPreload,
-                $seenCss,
-                $cssTags
-            );
-        }
-    }
-
-    private static function getHotUrl(): string
-    {
-        if (self::$hotUrl !== null) {
-            return self::$hotUrl;
-        }
-
-        $content = @file_get_contents(self::HOT_FILE);
-        if ($content === false) {
-            throw new \RuntimeException(
-                'Falha ao ler ' . self::HOT_FILE
-            );
-        }
-
-        $url = trim($content);
-        return self::$hotUrl = ($url !== '' ? $url : 'http:#localhost:5173');
-    }
-
-    private static function getManifest(): array
-    {
-        if (self::$manifest !== null) {
-            return self::$manifest;
-        }
-
-        if (!file_exists(self::MANIFEST_FILE)) {
-            throw new \RuntimeException(
-                "manifest.json não encontrado em " . self::MANIFEST_FILE
-                    . ". Execute 'npm run build' antes do deploy."
-            );
-        }
-
-        $content = @file_get_contents(self::MANIFEST_FILE);
-        if ($content === false) {
-            throw new \RuntimeException(
-                'Falha ao ler ' . self::MANIFEST_FILE
-            );
-        }
-
-        try {
-            /** @var array<string, array<string, mixed>> $decoded */
-            $decoded = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw new \RuntimeException(
-                'manifest.json corrompido: ' . $e->getMessage(),
-                0,
-                $e
-            );
-        }
-
-        if (!is_array($decoded)) {
-            throw new \RuntimeException(
-                'manifest.json não retornou objeto JSON válido.'
-            );
-        }
-
-        return self::$manifest = $decoded;
     }
 }
