@@ -43,7 +43,7 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Copia o binário do Composer a partir da imagem oficial
 # Evita instalar o Composer manualmente e reduz complexidade
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9 /usr/bin/composer /usr/bin/composer
 
 # Define o diretório de trabalho padrão dentro do container
 # Todos os comandos seguintes serão executados a partir desse diretório
