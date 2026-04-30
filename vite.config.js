@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import fs from 'node:fs'
+import { defineConfig } from 'vite';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const HOT_FILE = resolve(__dirname, 'public/hot')
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const HOT_FILE = resolve(__dirname, 'public/hot');
 
 function writeHotFilePlugin() {
     return {
@@ -22,16 +22,15 @@ function writeHotFilePlugin() {
                             : address.address
                 const port = address.port
                 fs.writeFileSync(HOT_FILE, `${protocol}://${host}:${port}`)
-            })
-
+            });
             const cleanup = () => {
                 if (fs.existsSync(HOT_FILE)) fs.unlinkSync(HOT_FILE)
             }
             process.on('exit', cleanup)
-            process.on('SIGINT', () => { cleanup(); process.exit() })
-            process.on('SIGTERM', () => { cleanup(); process.exit() })
-            process.on('SIGHUP', () => { cleanup(); process.exit() })
-        },
+            process.on('SIGINT', () => { cleanup(); process.exit() });
+            process.on('SIGTERM', () => { cleanup(); process.exit() });
+            process.on('SIGHUP', () => { cleanup(); process.exit() });
+        }
     }
 }
 
@@ -44,18 +43,15 @@ export default defineConfig(({ command }) => ({
         emptyOutDir: true,
         sourcemap: false,
         cssCodeSplit: true,
-
         rolldownOptions: {
             input: {
                 // CSS como entry INDEPENDENTE — não acoplado ao JS
                 style: resolve(__dirname, 'resources/css/app.css'),
-
                 // JS principal — sem nenhum import de CSS dentro dele
                 app: resolve(__dirname, 'resources/js/app.js'),
-
                 // Entries por página
                 'pages/customer': resolve(__dirname, 'resources/js/pages/customer.js'),
-                'pages/list-customer': resolve(__dirname, 'resources/js/pages/list-customer.js'),
+                'pages/list-customer': resolve(__dirname, 'resources/js/pages/list-customer.js')
             },
             output: {
                 entryFileNames: '[name]-[hash].js',
@@ -69,11 +65,10 @@ export default defineConfig(({ command }) => ({
                         return 'fonts/[name]-[hash][extname]'
                     }
                     return 'assets/[name]-[hash][extname]'
-                },
-            },
-        },
+                }
+            }
+        }
     },
-
     server: {
         host: '0.0.0.0',
         port: 5173,
@@ -82,11 +77,10 @@ export default defineConfig(({ command }) => ({
         origin: 'http://localhost:5173',
         hmr: {
             host: 'localhost',
-            protocol: 'ws',
-        },
+            protocol: 'ws'
+        }
     },
-
     plugins: [
-        writeHotFilePlugin(),
-    ],
-}))
+        writeHotFilePlugin()
+    ]
+}));
