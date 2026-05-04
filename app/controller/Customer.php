@@ -127,18 +127,18 @@ final class Customer extends Base
             ? (int) $form['order'][0]['column']
             : 0;
 
-        # Validação da direção (whitelist) — evita SQL injection no ORDER BY
+        # Validação da direção evita SQL injection no ORDER BY
         $orderType  = strtoupper($form['order'][0]['dir'] ?? 'DESC');
         $orderType  = in_array($orderType, ['ASC', 'DESC'], true) ? $orderType : 'DESC';
         $orderField = $columns[$posField];
 
         try {
-            # 1) Total geral (sem filtro) — DataTables: recordsTotal
+            # Total geral DataTables: recordsTotal
             $totalRecords = (int) \app\database\DB::select('COUNT(*)')
                 ->from('customer')
                 ->fetchOne();
 
-            # 2) Query principal com WHERE opcional
+            # Query principal com WHERE opcional
             $query = \app\database\DB::select('*')->from('customer');
 
             if (!is_null($term) && $term !== '') {
@@ -154,19 +154,19 @@ final class Customer extends Base
                     ->orWhere("TO_CHAR(atualizado_em, 'DD/MM/YYYY HH24:MI:SS') ILIKE :term");
             }
 
-            # 3) Total com filtro aplicado — clona o query e troca o SELECT por COUNT
+            # Total com filtro aplicado — clona o query e troca o SELECT por COUNT
             $filteredRecords = (int) (clone $query)
                 ->select('COUNT(*)')
                 ->fetchOne();
 
-            # 4) Resultados paginados e ordenados
+            # Resultados paginados e ordenados
             $customers = $query
                 ->orderBy($orderField, $orderType)
                 ->setFirstResult($start)
                 ->setMaxResults($length)
                 ->fetchAllAssociative();
 
-            # 5) Formatação para o DataTables
+            # Formatação para o DataTables
             $rows = [];
             foreach ($customers as $key => $value) {
                 $cpfCnpj        = $value['cpf_cnpj']         ?? '';
