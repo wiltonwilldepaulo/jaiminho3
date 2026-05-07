@@ -18,7 +18,7 @@
         "vlucas/phpdotenv": "^5.6",
         "doctrine/migrations": "^3.9",
         "doctrine/dbal": "^4.4",
-        "google/auth": "*"
+        "google/auth": "^1.50"
     },
     "require-dev": {
         "pestphp/pest": "^4.0",
