@@ -35,6 +35,6 @@ final class Version20260506210938 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // escreva aqui o rollback do up()
+        $schema->dropTable('users');
     }
 }
