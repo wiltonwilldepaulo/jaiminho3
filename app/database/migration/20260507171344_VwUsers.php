@@ -18,7 +18,7 @@ final class Version20260507171344 extends AbstractMigration
     {
         #Cria ou substitui a view de leitura com pivot dos contatos por tipo (idempotente).
         $this->addSql(<<<'SQL'
-            CREATE OR REPLACE VIEW public.vw_user AS
+            CREATE OR REPLACE VIEW vw_user AS
             SELECT
                 u.id,
                 u.nome,
