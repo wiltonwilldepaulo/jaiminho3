@@ -35,10 +35,9 @@ final class Login extends Base
         }
 
         try {
-
-            # Começa a montar a query: SELECT * FROM vw_person
+            # Começa a montar a query: SELECT * FROM vw_user
             $qb = \app\database\DB::select('*')
-                ->from('vw_person');
+                ->from('vw_user');
 
             # Define o valor que será procurado nos três campos
             # O Doctrine cria um "placeholder seguro" no lugar do valor real,
@@ -46,8 +45,8 @@ final class Login extends Base
             $login = $qb->createNamedParameter($login);
 
             # Monta a cláusula WHERE com três condições ligadas por OR:
-            # WHERE cpf_cnpj = :login OR email = :login OR whatsapp = :login
-            $qb->where('cpf_cnpj = ' . $login)
+            # WHERE cpf = :login OR email = :login OR whatsapp = :login
+            $qb->where('cpf = ' . $login)
                 ->orWhere('email = '    . $login)
                 ->orWhere('whatsapp = ' . $login);
 
@@ -134,7 +133,6 @@ final class Login extends Base
                 'id'               => $person['id'],
                 'sessao_expira_em' => $_SESSION['user']['sessao_expira_em']
             ], 200);
-
         } catch (\PDOException $e) {
             # Erro de banco: loga internamente e responde de forma genérica
             error_log('[auth][DB] ' . $e->getMessage());
