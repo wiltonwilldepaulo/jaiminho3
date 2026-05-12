@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+session_start();
+
 define('ROOT', dirname(__FILE__, 3));
 #DIRETÓRIO DAS VIEWS
 define('DIR_VIEWS', ROOT . '/app/view');

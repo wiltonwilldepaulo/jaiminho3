@@ -1,6 +1,6 @@
 import Swal from "sweetalert2";
 import Validate from "../components/validate.js";
-import Request from "../components/requests.js";
+import Requests from "../components/requests.js";
 
 const mdPreRegister = document.getElementById('mdPreRegister');
 const buttonPreRegister = document.getElementById('buttonPreRegister');
@@ -11,7 +11,47 @@ mdPreRegister.addEventListener('click', () => {
 });
 
 buttonLogin.addEventListener('click', async () => {
-    alert('Em desenvolvimento');
+    const valid = Validate.SetForm('form').Validate();
+    if (!valid) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Ops...',
+            text: 'Preencha os campos corretamente!',
+            timer: 2500,
+            progressBar: true
+        });
+        return;
+    }
+    const requests = new Requests();
+    const originalText = buttonLogin.textContent;
+    try {
+        buttonLogin.disabled = true;
+        buttonLogin.textContent = 'Autenticando, aguarde...';
+        const response = await requests.setForm('form').post('/authentication/auth');
+        if (!response.status) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Ops...',
+                text: response.msg || 'Não foi possivel validar as credenciais tente novamente mais tarde!',
+                timer: 2500,
+                progressBar: true
+            });
+            return;
+        }
+        //window.location.replace('/');
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Ops...',
+            text: error.message || 'Restrição: tenta de novo depois',
+            timer: 2500,
+            progressBar: true
+        });
+        return;
+    } finally {
+        buttonLogin.disabled = false;
+        buttonLogin.textContent = originalText;
+    }
 });
 
 buttonPreRegister.addEventListener('click', async () => {
@@ -29,7 +69,7 @@ buttonPreRegister.addEventListener('click', async () => {
         return;
     }
 
-    const requests = new Request();
+    const requests = new Requests();
 
     const originalText = buttonPreRegister.textContent;
     try {

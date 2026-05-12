@@ -141,7 +141,7 @@ final class Login extends Base
         } catch (\Throwable $e) {
             # Qualquer outra falha inesperada: loga e responde de forma genérica
             error_log('[auth][GERAL] ' . $e->getMessage());
-            return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente.', 'id' => 0], 500);
+            return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente: ' . $e->getMessage(), 'id' => 0], 500);
         }
     }
 
