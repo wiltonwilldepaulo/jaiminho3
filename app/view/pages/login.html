@@ -10,7 +10,6 @@
 
 <body>
     <form id="form">
-
         <div class="modal fade" id="modalPreRegisterUser" data-bs-backdrop="static" data-bs-keyboard="false"
             tabindex="-1" aria-labelledby="modalPreRegisterUserLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -91,12 +90,12 @@
                         <div class="card-body">
                             <div class="form-floating mb-3">
                                 <input type="text" class="form-control" id="login" name="login"
-                                    placeholder="name@example.com" autofocus>
+                                    placeholder="name@example.com" autofocus required>
                                 <label for="login">Login, CPF ou Telefone ou E-mail</label>
                             </div>
                             <div class="form-floating mb-3">
                                 <input type="password" class="form-control" id="senha" name="senha"
-                                    placeholder="name@example.com">
+                                    placeholder="name@example.com" required>
                                 <label for="senha">Informe sua senha</label>
                             </div>
                             <div class="row">
@@ -109,7 +108,7 @@
                             </div>
                         </div>
                         <div class="card-footer">
-                            <button id="login" type="button" class="btn btn-success" id="login">
+                            <button type="button" class="btn btn-success" id="buttonLogin">
                                 Login
                             </button>
                             <button id="loginGoogle" type="button" class="btn btn-primary">

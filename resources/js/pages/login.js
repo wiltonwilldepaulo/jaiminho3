@@ -4,9 +4,14 @@ import Request from "../components/requests.js";
 
 const mdPreRegister = document.getElementById('mdPreRegister');
 const buttonPreRegister = document.getElementById('buttonPreRegister');
+const buttonLogin = document.getElementById('buttonLogin');
 
 mdPreRegister.addEventListener('click', () => {
     $('#modalPreRegisterUser').modal('show');
+});
+
+buttonLogin.addEventListener('click', async () => {
+    alert('Em desenvolvimento');
 });
 
 buttonPreRegister.addEventListener('click', async () => {
@@ -30,10 +35,36 @@ buttonPreRegister.addEventListener('click', async () => {
     try {
         buttonPreRegister.textContent = 'Cadastrando, por favor aguarde...';
         buttonPreRegister.disabled = true;
-        const response = await requests.setForm('form').post('/');
+        const response = await requests.setForm('form').post('/authentication/preregister');
+
+        if (!response.status) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Ops...',
+                text: response.message,
+                timer: 2500,
+                progressBar: true
+            });
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Sucesso!',
+            text: response.msg,
+            timer: 2500,
+            progressBar: true
+        }).then(() => {
+            $('#modalPreRegisterUser').modal('hide');
+        });
 
     } catch (error) {
-
+        Swal.fire({
+            icon: 'error',
+            title: 'Ops...',
+            text: error.message || 'Ocorreu um erro ao cadastrar o usuário!',
+            timer: 2500,
+            progressBar: true
+        });
     } finally {
         buttonPreRegister.disabled = false;
         buttonPreRegister.textContent = originalText;

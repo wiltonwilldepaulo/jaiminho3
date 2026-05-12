@@ -8,7 +8,7 @@ $app->get('/login', app\controller\Login::class . ':login')->add(app\middleware\
 
 $app->group('/authentication', function (Slim\Routing\RouteCollectorProxy $group) {
     $group->post('/auth', app\controller\Login::class . ':auth');
-    $group->post('/preregister', app\controller\Login::class . ':preregister');
+    $group->post('/preregister', app\controller\Login::class . ':preRegister');
 });
 
 $app->group('/cliente', function (Slim\Routing\RouteCollectorProxy $group) {
