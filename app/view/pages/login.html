@@ -49,8 +49,28 @@
                                     <label for="rg">Digite seu RG</label>
                                 </div>
                             </div>
+                            <div class="col-6">
+                                <div class="form-floating mb-3">
+                                    <input type="tel" id="telefone" name="telefone" class="form-control"
+                                        placeholder="name@example.com">
+                                    <label for="telefone">Digite seu telefone</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-floating mb-3">
+                                    <input type="email" id="email" name="email" class="form-control"
+                                        placeholder="name@example.com">
+                                    <label for="email">Digite seu E-mail</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-floating mb-3">
+                                    <input type="password" id="senha" name="senha" class="form-control"
+                                        placeholder="name@example.com">
+                                    <label for="senha">Digite sua senha</label>
+                                </div>
+                            </div>
                         </div>
-
                     </div>
                     <div class="modal-footer">
                         <button type="button" id="buttonPreRegister" class="btn btn-outline-success">
@@ -82,8 +102,7 @@
                             <div class="row">
                                 <div class="col-12">
                                     Ainda não tenho conta faça aqui seu:
-                                    <button type="button" class="btn btn-link" data-bs-toggle="modal"
-                                        data-bs-target="#modalPreRegisterUser">
+                                    <button type="button" class="btn btn-link" id="mdPreRegister">
                                         Pré-cadastro
                                     </button>
                                 </div>
@@ -102,7 +121,9 @@
             </div>
         </div>
     </form>
-    {{ vite('resources/js/app.js') }}
+    {% block script %}
+    {{ vite('resources/js/pages/login.js') }}
+    {% endblock %}
 </body>
 
 </html>

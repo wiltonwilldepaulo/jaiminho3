@@ -144,4 +144,46 @@ final class Login extends Base
             return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente.', 'id' => 0], 500);
         }
     }
+
+    public function preRegister($request, $response)
+    {
+        $form = $request->getParsedBody();
+
+        #Captura os dados informado pelo usuário no formulário de pré-cadastro
+        $nome      = $form['nome'] ?? null;
+        $sobrenome = $form['sobrenome'] ?? null;
+        $cpf       = $form['cpf'] ?? null;
+        $rg        = $form['rg'] ?? null;
+        $senha     = $form['senha'] ?? null;
+        #Dados de contato.
+        $email     = $form['email'] ?? null;
+        $telefone  = $form['telefone'] ?? null;
+        #Criamos o array associativo com os dados do usuário, onde a 
+        #chave é o nome da coluna no banco de dados e o valor é o dado 
+        #informado pelo usuário.
+        $DataUser = [
+            'nome'      => $nome,
+            'sobrenome' => $sobrenome,
+            'cpf'       => $cpf,
+            'rg'        => $rg,
+            'senha'     => password_hash($senha, PASSWORD_DEFAULT)
+        ];
+        $id_usuario = 0;
+        #Insere os dados no data base com o Docrine e recebe o ID do usuário criado.
+        #?????
+        #Insere os dados do email do usuário na base.
+        $DataEmail = [
+            'id_usuario' => $id_usuario,
+            'tipo' => 'EMAIL',
+            'contato' => $email
+        ];
+        #????
+        #Insere os dados do telefone do usuário na base.
+        $DataTel = [
+            'id_usuario' => $id_usuario,
+            'tipo' => 'TELEFONE',
+            'contato' => $telefone
+        ];
+        #???
+    }
 }
