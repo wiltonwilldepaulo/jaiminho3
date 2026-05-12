@@ -80,32 +80,6 @@ services:
     networks:
       - app_network
 
-  redis:
-    image: redis:8.6-alpine3.23
-    container_name: app_redis
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
-    environment:
-      TZ: ${TZ}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-
-    command: >
-      sh -c "exec redis-server --requirepass \"$${REDIS_PASSWORD}\""
-
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -h 127.0.0.1 -p 6379 -a \"$${REDIS_PASSWORD}\" ping | grep PONG || exit 1" ]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
-
-    volumes:
-      - ./docker/redis:/data
-
-    networks:
-      - app_network
-
   # Serviço do PHP, responsável por executar a aplicação
   # Serviço do PHP, responsável por executar a aplicação
   php:
@@ -141,29 +115,36 @@ services:
 
     # Variáveis de ambiente do container e tuning do PHP-FPM via variáveis suportadas pela imagem oficial
     environment:
-      # Define o fuso horário do container
+      # Aplicação
       TZ: ${TZ}
-
-      # Se APP_DEBUG tem valor no .env → XDEBUG_MODE=debug (ativo); se vazio → usa "off" do php.ini
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-true}
       XDEBUG_MODE: ${APP_DEBUG:+debug}
 
-      # Estratégia do process manager: dynamic ajusta workers conforme a demanda real
+      # Banco de dados
+      DB_CONNECTION: ${DB_CONNECTION}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Redis
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DATABASE: ${REDIS_DATABASE:-1}
+      REDIS_PREFIX: ${REDIS_PREFIX:-SESS:}
+      REDIS_TIMEOUT: ${REDIS_TIMEOUT:-2.5}
+      REDIS_READ_TIMEOUT: ${REDIS_READ_TIMEOUT:-2.5}
+      REDIS_PERSISTENT: ${REDIS_PERSISTENT:-1}
+
+      # PHP-FPM process manager
       PHP_FPM_PM: dynamic
-
-      # Número máximo de workers PHP-FPM que podem existir simultaneamente
       PHP_FPM_PM_MAX_CHILDREN: 10
-
-      # Número de workers iniciados junto com o PHP-FPM na inicialização do container
       PHP_FPM_PM_START_SERVERS: 2
-
-      # Número mínimo de workers ociosos mantidos prontos para absorver picos de requisição
       PHP_FPM_PM_MIN_SPARE_SERVERS: 1
-
-      # Número máximo de workers ociosos permitidos antes de o process manager encerrar o excesso
       PHP_FPM_PM_MAX_SPARE_SERVERS: 3
-
-      # Número máximo de requisições que cada worker processa antes de ser reciclado
-      # Previne memory leaks acumulados em processos de longa duração
       PHP_FPM_PM_MAX_REQUESTS: 500
 
     # Sistemas de arquivos temporários montados em RAM, eliminando I/O de disco
@@ -230,6 +211,32 @@ services:
         condition: service_healthy
 
     # Conecta o container à rede interna do projeto
+    networks:
+      - app_network
+
+  redis:
+    image: redis:8.6-alpine3.23
+    container_name: app_redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    environment:
+      TZ: ${TZ}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+    command: >
+      sh -c "exec redis-server --requirepass \"$${REDIS_PASSWORD}\""
+
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -h 127.0.0.1 -p 6379 -a \"$${REDIS_PASSWORD}\" ping | grep PONG || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+    volumes:
+      - ./docker/redis:/data
+
     networks:
       - app_network
 
