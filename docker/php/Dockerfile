@@ -40,21 +40,18 @@ RUN apk add --no-cache \
     oniguruma-dev \
     tzdata
 
-RUN apk add --no-cache $PHPIZE_DEPS \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    libpng-dev \
-    postgresql-dev \
-    icu-dev \
-    oniguruma-dev \
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+        freetype-dev libjpeg-turbo-dev libpng-dev \
+        postgresql-dev icu-dev oniguruma-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
-    pdo_pgsql \
-    intl \
-    mbstring \
-    gd \
-    && pecl install pcov \
-    && docker-php-ext-enable pcov
+    && docker-php-ext-install pdo_pgsql intl mbstring gd \
+    && pecl install igbinary && docker-php-ext-enable igbinary \
+    && pecl install redis    && docker-php-ext-enable redis \
+    && pecl install pcov     && docker-php-ext-enable pcov \
+    && apk add --no-cache --virtual .runtime-deps \
+        libpq icu-libs oniguruma libjpeg-turbo libpng freetype \
+    && apk del .build-deps \
+    && rm -rf /tmp/pear ~/.pearrc /var/cache/apk/*
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 COPY --from=composer:2.9 /usr/bin/composer /usr/bin/composer
