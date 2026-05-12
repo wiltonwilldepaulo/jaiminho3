@@ -158,14 +158,14 @@ services:
       resources:
         limits:
           # Limite máximo de memória RAM compatível com max_children=10 em desenvolvimento
-          memory: 512M
+          memory: 1024M
 
           # Limite máximo de uso de CPU em relação ao host
-          cpus: "1.00"
+          cpus: "2.00"
 
         reservations:
           # Memória mínima garantida ao container antes de qualquer alocação do Docker
-          memory: 256M
+          memory: 512M
 
     # Limite de file descriptors, o PHP-FPM abre múltiplos descritores por worker ativo
     ulimits:
