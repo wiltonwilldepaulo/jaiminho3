@@ -148,7 +148,6 @@ final class Login extends Base
     public function preRegister($request, $response)
     {
         $form = $request->getParsedBody();
-
         #Captura os dados informado pelo usuário no formulário de pré-cadastro
         $nome      = $form['nome'] ?? null;
         $sobrenome = $form['sobrenome'] ?? null;
