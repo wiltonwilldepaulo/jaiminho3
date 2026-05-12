@@ -23,17 +23,14 @@ final class Login extends Base
         $form = $request->getParsedBody();
         $login = $form['login'] ?? null;
         $senha = $form['senha'] ?? null;
-
         # Bloqueia se algum campo veio vazio
         if (is_null($login) || is_null($senha)) {
             return $this->json($response, ['status' => false, 'msg' => 'Por favor informe seu usuário e senha!', 'id' => 0]);
         }
-
         # Verifica se a sessão está em "lockout" por excesso de tentativas falhas
         if (isset($_SESSION['login_locked_until']) && $_SESSION['login_locked_until'] > time()) {
             return $this->json($response, ['status' => false, 'msg' => 'Muitas tentativas. Tente novamente em alguns minutos.', 'id' => 0], 429);
         }
-
         try {
             # Começa a montar a query: SELECT * FROM vw_user
             $qb = \app\database\DB::select('*')
@@ -51,16 +48,16 @@ final class Login extends Base
                 ->orWhere('whatsapp = ' . $login);
 
             # Executa a query e busca um único registro (a primeira linha encontrada)
-            $person = $qb->fetchAssociative();
+            $user = $qb->fetchAssociative();
 
             # Hash bcrypt pré-computado e inválido, usado quando o usuário não existe (proteção contra timing attack)
             $dummyHash = '$2y$10$CwTycUXWue0Thq9StjUM0uJ8.k3.kK1m3Sv7lJ1uG9N9Yvb.MqYsa';
 
             # Sempre executa password_verify, mesmo sem usuário, para manter tempo de resposta constante
-            $senhaValida = password_verify($senha, $person['senha'] ?? $dummyHash);
+            $senhaValida = password_verify($senha, $user['senha'] ?? $dummyHash);
 
             # Falha de autenticação: mensagem genérica + contador de tentativas
-            if (!$person || !$senhaValida) {
+            if (!$user || !$senhaValida) {
                 # Incrementa o contador de tentativas falhas da sessão atual
                 $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
                 # Após 5 falhas, bloqueia novas tentativas por 15 minutos (rate limiting básico)
@@ -78,22 +75,22 @@ final class Login extends Base
             session_regenerate_id(true);
 
             # Renova o hash da senha se o algoritmo/custo padrão tiver mudado
-            if (password_needs_rehash($person['senha'], PASSWORD_DEFAULT)) {
+            if (password_needs_rehash($user['senha'], PASSWORD_DEFAULT)) {
                 \app\database\DB::connection()->update(
-                    'person',
+                    'users',
                     [
                         'senha'         => password_hash($senha, PASSWORD_DEFAULT),
                         'atualizado_em' => date('Y-m-d H:i:s'),
                     ],
-                    ['id' => $person['id']],
+                    ['id' => $user['id']],
                 );
             }
 
             # Remove o hash da senha antes de gravar o usuário na sessão (evita expor credencial)
-            unset($person['senha']);
+            unset($user['senha']);
 
             # Persiste o usuário autenticado na sessão (fonte de verdade do estado)
-            $_SESSION['user'] = $person;
+            $_SESSION['user'] = $user;
             $_SESSION['user']['logado'] = true;
 
             # Calcula o tempo de vida da sessão a partir do php.ini, com fallback de 3600s
@@ -103,7 +100,7 @@ final class Login extends Base
             $payload = [
                 'iat' => time(),                 # Momento de emissão
                 'exp' => time() + $lifetime,     # Expiração alinhada à sessão
-                'sub' => (string) $person['id'], # Subject = ID do usuário
+                'sub' => (string) $user['id'], # Subject = ID do usuário
             ];
 
             # Assina o token JWT com a chave secreta da aplicação
@@ -130,7 +127,7 @@ final class Login extends Base
             return $this->json($response, [
                 'status'           => true,
                 'msg'              => 'Seja bem vindo de volta!',
-                'id'               => $person['id'],
+                'id'               => $user['id'],
                 'sessao_expira_em' => $_SESSION['user']['sessao_expira_em']
             ], 200);
         } catch (\PDOException $e) {
