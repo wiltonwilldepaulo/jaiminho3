@@ -131,9 +131,11 @@ final class Login extends Base
                 'samesite' => 'Lax',
             ]);
 
+            # Cria um único DateTimeImmutable aproveitando $now já cacheado (coerência com iat/exp do JWT)
+            $agora = (new \DateTimeImmutable())->setTimestamp($now);
             # Registra na sessão o horário de criação e o horário previsto de expiração (formato H:i:s correto)
-            $_SESSION['user']['sessao_criada_em'] = (new \DateTime())->format('Y-m-d H:i:s');
-            $_SESSION['user']['sessao_expira_em'] = (new \DateTime())->modify("+{$lifetime} seconds")->format('Y-m-d H:i:s');
+            $_SESSION['user']['sessao_criada_em'] = $agora->format('Y-m-d H:i:s');
+            $_SESSION['user']['sessao_expira_em'] = $agora->modify("+{$lifetime} seconds")->format('Y-m-d H:i:s');
 
             # Retorna a resposta de sucesso ao cliente
             return $this->json($response, [
