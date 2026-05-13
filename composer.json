@@ -19,7 +19,8 @@
         "doctrine/migrations": "^3.9",
         "doctrine/dbal": "^4.4",
         "google/auth": "^1.50",
-        "firebase/php-jwt": "^7.0"
+        "firebase/php-jwt": "^7.0",
+        "google/apiclient": "*"
     },
     "require-dev": {
         "pestphp/pest": "^4.0",

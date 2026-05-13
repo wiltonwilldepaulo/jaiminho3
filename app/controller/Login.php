@@ -206,13 +206,35 @@ final class Login extends Base
     public function google($request, $response)
     {
         $form = $request->getParsedBody();
+        echo "<pre>";
+        var_dump($form);
+        die;
         $credential = $form['credential'] ?? null;
 
         $form_g_csrf_token = $form['g_csrf_token'] ?? null;
 
-        if (is_null($credential) || ($form_g_csrf_token)) {
-            
+        $cookie_g_csrf_token = $_COOKIE['g_csrf_token'] ?? null;
+
+        $google_client_id = $_ENV['GOOGLE_CLIENT_ID'] ?? null;
+
+        if (is_null($credential) || is_null($form_g_csrf_token) || is_null($cookie_g_csrf_token)) {
+            throw new \InvalidArgumentException('Credential do Google ausente');
         }
 
+        var_dump($google_client_id);
+        $client = new \Google\Client(['client_id' => $google_client_id]);
+
+        try {
+            $payload = $client->verifyIdToken($credential);
+            # Dados do usuário extraídos do payload validado
+            $google_id   = $payload['sub'];                                                    // ID único do Google (immutable)
+            $email       = $payload['email'];
+            $given_name  = $payload['given_name']  ?? '';                                      // Nome
+            $family_name = $payload['family_name'] ?? '';                                      // Sobrenome
+            $full_name   = $payload['name']        ?? trim("{$given_name} {$family_name}");    // Nome completo (fallback)
+            $picture_url = $payload['picture']     ?? null;
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Falha na verificação do ID Token do Google: ' . $e->getMessage(), 0, $e);
+        }
     }
 }
