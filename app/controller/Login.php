@@ -31,6 +31,7 @@ final class Login extends Base
         if (isset($_SESSION['login_locked_until']) && $_SESSION['login_locked_until'] > time()) {
             return $this->json($response, ['status' => false, 'msg' => 'Muitas tentativas. Tente novamente em alguns minutos.', 'id' => 0], 429);
         }
+
         try {
             # Começa a montar a query: SELECT * FROM vw_user
             $qb = \app\database\DB::select('*')
