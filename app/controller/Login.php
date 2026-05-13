@@ -40,13 +40,13 @@ final class Login extends Base
             # Define o valor que será procurado nos três campos
             # O Doctrine cria um "placeholder seguro" no lugar do valor real,
             # protegendo a aplicação contra SQL injection.
-            $login = $qb->createNamedParameter($login);
+            $placeholder = $qb->createNamedParameter($login);
 
             # Monta a cláusula WHERE com três condições ligadas por OR:
             # WHERE cpf = :login OR email = :login OR whatsapp = :login
-            $qb->where('cpf = ' . $login)
-                ->orWhere('email = '    . $login)
-                ->orWhere('whatsapp = ' . $login);
+            $qb->where('cpf = ' . $placeholder)
+                ->orWhere('email = '    . $placeholder)
+                ->orWhere('whatsapp = ' . $placeholder);
 
             # Executa a query e busca um único registro (a primeira linha encontrada)
             $user = $qb->fetchAssociative();
@@ -97,11 +97,22 @@ final class Login extends Base
             # Calcula o tempo de vida da sessão a partir do php.ini, com fallback de 3600s
             $lifetime = (int) (ini_get('session.gc_maxlifetime') ?: 3600);
 
-            # Monta o payload do JWT usando o ID do usuário como subject (identificador estável e único)
+            # Cacheia o timestamp atual para manter coerência entre iat, nbf e exp
+            $now = time();
+
+            # Identificador único deste token, em hex de 32 caracteres (16 bytes random_bytes)
+            # Permite revogar tokens individualmente via denylist no Redis
+            $jti = bin2hex(random_bytes(16));
+
+            # Monta o payload do JWT seguindo a RFC 7519 (Registered Claim Names)
             $payload = [
-                'iat' => time(),                 # Momento de emissão
-                'exp' => time() + $lifetime,     # Expiração alinhada à sessão
-                'sub' => (string) $user['id'], # Subject = ID do usuário
+                'iat' => $now,                  # Issued At: momento de emissão
+                'nbf' => $now,                  # Not Before: token só é válido a partir daqui
+                'exp' => $now + $lifetime,      # Expiration: expiração alinhada à sessão PHP
+                'sub' => (string) $user['id'],  # Subject: ID do usuário autenticado
+                'iss' => HOST,                  # Issuer: domínio emissor (mesma constante do cookie)
+                'aud' => HOST,                  # Audience: aplicação que vai consumir o token
+                'jti' => $jti,                  # JWT ID: identificador único para revogação
             ];
 
             # Assina o token JWT com a chave secreta da aplicação
@@ -110,11 +121,11 @@ final class Login extends Base
             # Determina se a conexão está em HTTPS (define o atributo Secure do cookie)
             $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
 
-            # Define o cookie auth_token usando COOKIE_DOMAIN (constante de configuração, imune a Host Header Injection)
+            # Define o cookie auth_token usando domain (constante de configuração, imune a Host Header Injection)
             setcookie('auth_token', $jwt, [
                 'expires'  => time() + $lifetime,
                 'path'     => '/',
-                'domain' => $_SERVER['HTTP_HOST'], #Usa dinamicamente o domínio correto
+                'domain' => HOST,
                 'secure'   => $isSecure,
                 'httponly' => true,
                 'samesite' => 'Lax',
@@ -142,7 +153,7 @@ final class Login extends Base
         } catch (\Throwable $e) {
             # Qualquer outra falha inesperada: loga e responde de forma genérica
             error_log('[auth][GERAL] ' . $e->getMessage());
-            return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente: ' . $e->getMessage(), 'id' => 0], 500);
+            return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente ', 'id' => 0], 500);
         }
     }
 

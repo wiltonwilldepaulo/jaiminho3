@@ -38,7 +38,7 @@ buttonLogin.addEventListener('click', async () => {
             });
             return;
         }
-        //window.location.replace('/');
+        window.location.replace('/');
     } catch (error) {
         Swal.fire({
             icon: 'error',
