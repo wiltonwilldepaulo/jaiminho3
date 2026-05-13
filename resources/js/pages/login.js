@@ -6,6 +6,8 @@ const mdPreRegister = document.getElementById('mdPreRegister');
 const buttonPreRegister = document.getElementById('buttonPreRegister');
 const buttonLogin = document.getElementById('buttonLogin');
 
+
+
 mdPreRegister.addEventListener('click', () => {
     $('#modalPreRegisterUser').modal('show');
 });

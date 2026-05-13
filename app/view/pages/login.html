@@ -111,14 +111,24 @@
                             <button type="button" class="btn btn-success" id="buttonLogin">
                                 Login
                             </button>
-                            <button id="loginGoogle" type="button" class="btn btn-primary">
-                                Login com Google
-                            </button>
+                            <div class="btn">
+                                <div id="g_id_onload"
+                                    data-client_id="346079394633-hd72jdjgaurl4poo0os8d1a374aojm0v.apps.googleusercontent.com"
+                                    data-context="signin" data-ux_mode="popup" data-login_uri="/authentication/google"
+                                    data-itp_support="true">
+                                </div>
+
+                                <div class="g_id_signin" data-type="standard" data-shape="rectangular"
+                                    data-theme="outline" data-text="signin_with" data-size="large"
+                                    data-logo_alignment="left">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <script src="https://accounts.google.com/gsi/client" async></script>
     </form>
     {{ vite('resources/js/app.js') }}
     {{ vite('resources/js/pages/login.js') }}

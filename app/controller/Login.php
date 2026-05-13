@@ -158,7 +158,6 @@ final class Login extends Base
             return $this->json($response, ['status' => false, 'msg' => 'Erro inesperado. Tente novamente ', 'id' => 0], 500);
         }
     }
-
     public function preRegister($request, $response)
     {
         $form = $request->getParsedBody();
@@ -203,5 +202,17 @@ final class Login extends Base
             'status' => true,
             'msg' => 'Usuário cadastrado com sucesso!'
         ], 200);
+    }
+    public function google($request, $response)
+    {
+        $form = $request->getParsedBody();
+        $credential = $form['credential'] ?? null;
+
+        $form_g_csrf_token = $form['g_csrf_token'] ?? null;
+
+        if (is_null($credential) || ($form_g_csrf_token)) {
+            
+        }
+
     }
 }
