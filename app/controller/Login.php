@@ -232,6 +232,12 @@ final class Login extends Base
             $full_name   = $payload['name']        ?? trim("{$given_name} {$family_name}");    // Nome completo (fallback)
             $picture_url = $payload['picture']     ?? null;
 
+            # Atividade anterior dia 14-05-2026
+
+            # 1. Finalizar o processo de autenticação 
+
+            # 2. Opção de sair do sistema onde deve ser destruído a sessão e direcionado para pagina de login novamente
+            #_________________________________________________________________________________________________________
             #Com base no e-mail, recuperar os dados de do usuário 
             #utilizando o seguinte script select * from vw_user where email = $email
 
