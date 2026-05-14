@@ -222,6 +222,29 @@ final class Login extends Base
         try {
 
 
+            $provider = new \League\OAuth2\Client\Provider\Google([
+                'clientId'     => $google_client_id,
+                'clientSecret' => '',
+                'redirectUri'  => '',
+            ]);
+
+            $httpResponse = $provider->getHttpClient()->request(
+                'GET',
+                'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($credential),
+                ['timeout' => 3, 'connect_timeout' => 2]
+            );
+
+            $claims = json_decode((string) $httpResponse->getBody(), true, flags: JSON_THROW_ON_ERROR);
+
+            $nome = $claims['given_name'];
+            $sobrenome = $claims['family_name'];
+            $nomecompleto = $claims['name'];
+            $email = $claims['email'];
+            $foto = $claims['picture'];
+
+
+            echo "<pre>";
+            var_dump($nome, $sobrenome, $nomecompleto, $email, $foto);
             # Atividade anterior dia 14-05-2026
 
             # 1. Finalizar o processo de autenticação 
