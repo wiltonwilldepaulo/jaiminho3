@@ -18,7 +18,8 @@
         "doctrine/migrations": "^3.9",
         "doctrine/dbal": "^4.4",
         "firebase/php-jwt": "^7.0",
-        "google/apiclient": "*"
+        "league/oauth2-client": "^2.9",
+        "league/oauth2-google": "^5.0"
     },
     "require-dev": {
         "pestphp/pest": "^4.0",
