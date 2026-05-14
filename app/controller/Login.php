@@ -219,18 +219,8 @@ final class Login extends Base
             throw new \InvalidArgumentException('Credential do Google ausente');
         }
 
-        var_dump($google_client_id);
-        $client = new \Google\Client(['client_id' => $google_client_id]);
-
         try {
-            $payload = $client->verifyIdToken($credential);
-            # Dados do usuário extraídos do payload validado
-            $google_id   = $payload['sub'];                                                    // ID único do Google (immutable)
-            $email       = $payload['email'];
-            $given_name  = $payload['given_name']  ?? '';                                      // Nome
-            $family_name = $payload['family_name'] ?? '';                                      // Sobrenome
-            $full_name   = $payload['name']        ?? trim("{$given_name} {$family_name}");    // Nome completo (fallback)
-            $picture_url = $payload['picture']     ?? null;
+
 
             # Atividade anterior dia 14-05-2026
 
