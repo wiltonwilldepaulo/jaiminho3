@@ -181,7 +181,7 @@ final class Customer extends Base
                     $value['id'],
                     $nomeCompleto,
                     $cpfCnpj,
-                    (new \DateTime($value['nascimento_fundacao'] ?? date('Y-m-d')))->format('d/m/Y'),
+z
                     ($value['ativo'] === true) ? 'Ativo' : 'Inativo',
                     (new \DateTime($value['criado_em']))->format('d/m/Y H:i:s'),
                     (new \DateTime($value['atualizado_em']))->format('d/m/Y H:i:s'),
