@@ -24,9 +24,9 @@ COPY resources ./resources
 RUN npm run build
 
 # ============================================================================
-# Estágio 2: Runtime PHP (Alpine + PHP-FPM 8.5.4)
+# Estágio 2: Runtime PHP (Alpine + PHP-FPM 8.5.6)
 # ============================================================================
-FROM php:8.5.4-fpm-alpine3.23
+FROM php:8.5.6-fpm-alpine3.22
 
 ENV TZ=${TZ} \
     COMPOSER_ALLOW_SUPERUSER=1
@@ -41,15 +41,15 @@ RUN apk add --no-cache \
     tzdata
 
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-        freetype-dev libjpeg-turbo-dev libpng-dev \
-        postgresql-dev icu-dev oniguruma-dev \
+    freetype-dev libjpeg-turbo-dev libpng-dev \
+    postgresql-dev icu-dev oniguruma-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_pgsql intl mbstring gd \
     && pecl install igbinary && docker-php-ext-enable igbinary \
     && pecl install redis    && docker-php-ext-enable redis \
     && pecl install pcov     && docker-php-ext-enable pcov \
     && apk add --no-cache --virtual .runtime-deps \
-        libpq icu-libs oniguruma libjpeg-turbo libpng freetype \
+    libpq icu-libs oniguruma libjpeg-turbo libpng freetype \
     && apk del .build-deps \
     && rm -rf /tmp/pear ~/.pearrc /var/cache/apk/*
 
