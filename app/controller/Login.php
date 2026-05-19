@@ -201,7 +201,7 @@ final class Login extends Base
         return $this->json($response, [
             'status' => true,
             'msg' => 'Usuário cadastrado com sucesso!'
-        ], 200);
+        ], 201);
     }
     public function google($request, $response)
     {
